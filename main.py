@@ -7,7 +7,7 @@ import re
 import datetime
 from textblob import TextBlob
 
-app = FastAPI(title="InfoVerify Enterprise Engine", version="10.0.0")
+app = FastAPI(title="InfoVerify Enterprise Engine", version="11.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,8 +28,8 @@ class AuthPayload(BaseModel):
     username: str
     password: str
 
-class ResetPayload(BaseModel):
-    target_username: str
+class UpdateSelfPayload(BaseModel):
+    new_username: str
     new_password: str
 
 class AdminCreatePayload(BaseModel):
@@ -37,19 +37,23 @@ class AdminCreatePayload(BaseModel):
     new_password: str
     role: str
 
+class AdminEditPayload(BaseModel):
+    old_username: str
+    new_username: str
+    new_password: str
+
 class Payload(BaseModel):
     url: str
     headline: str
     username: str
 
-# --- TRUST DATABASES ---
+# --- ENGINE HELPERS ---
 TLD_WEIGHTS = { 
     '.gov': 50, '.mil': 50, '.edu': 45, '.bank': 45, '.int': 45, '.ac.in': 45,
     '.com': 0, '.org': 10, '.net': 0, '.io': 5,
     '.xyz': -20, '.click': -40, '.onion': -50, '.tk': -45
 }
 TRUSTED_DOMAINS = ['bbc.com', 'reuters.com', 'apnews.com', 'npr.org', 'drmgrdu.ac.in', 'nature.com']
-URL_SHORTENERS = ['bit.ly', 'tinyurl.com', 't.co']
 CLICKBAIT_PHRASES = ["you won't believe", "shocking", "this one trick", "what happens next", "secret"]
 
 def extract_domain_info(url_string: str):
@@ -74,45 +78,69 @@ async def login(payload: AuthPayload):
 async def register(payload: AuthPayload):
     if payload.username in fake_db:
         raise HTTPException(status_code=400, detail="Username already exists")
-    
     fake_db[payload.username] = {"pwd": payload.password, "role": "user", "history": []}
     return {"success": True, "username": payload.username, "role": "user", "history": []}
 
-# --- ADMIN SECURE ENDPOINTS ---
-@app.post("/api/v1/admin/reset")
-async def reset_password(payload: ResetPayload, username: str = Header(None)):
-    requester = fake_db.get(username)
-    if not requester or requester["role"] != "dev":
-        raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
+# --- USER PROFILE ENDPOINTS ---
+@app.put("/api/v1/users/me")
+async def edit_my_profile(payload: UpdateSelfPayload, username: str = Header(None)):
+    user = fake_db.get(username)
+    if not user: raise HTTPException(status_code=401, detail="Unauthorized")
     
-    target = fake_db.get(payload.target_username)
-    if not target:
-        raise HTTPException(status_code=404, detail="Target user not found.")
+    if payload.new_username != username and payload.new_username in fake_db:
+        raise HTTPException(status_code=400, detail="Username already taken.")
+
+    # Migrate data to new key if username changed
+    user_data = fake_db.pop(username)
+    user_data["pwd"] = payload.new_password
+    fake_db[payload.new_username] = user_data
     
-    target["pwd"] = payload.new_password
-    return {"success": True, "message": f"Password successfully updated for {payload.target_username}"}
+    return {"success": True, "message": "Profile updated", "new_username": payload.new_username}
+
+# --- ADMIN MANAGEMENT ENDPOINTS ---
+@app.get("/api/v1/admin/users")
+async def get_all_users(username: str = Header(None)):
+    req = fake_db.get(username)
+    if not req or req["role"] != "dev": raise HTTPException(status_code=403, detail="Admin only.")
+    
+    # Return user list without exposing passwords securely to the frontend
+    users = [{"username": k, "role": v["role"], "pwd": v["pwd"]} for k, v in fake_db.items()]
+    return {"success": True, "users": users}
 
 @app.post("/api/v1/admin/create_user")
 async def create_user(payload: AdminCreatePayload, username: str = Header(None)):
-    requester = fake_db.get(username)
-    if not requester or requester["role"] != "dev":
-        raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
+    req = fake_db.get(username)
+    if not req or req["role"] != "dev": raise HTTPException(status_code=403, detail="Admin only.")
     
     if payload.new_username in fake_db:
         raise HTTPException(status_code=400, detail="Username already exists.")
     
     fake_db[payload.new_username] = {"pwd": payload.new_password, "role": payload.role, "history": []}
-    return {"success": True, "message": f"Account '{payload.new_username}' created with role: {payload.role.upper()}"}
+    return {"success": True, "message": f"Account '{payload.new_username}' created."}
+
+@app.put("/api/v1/admin/edit_user")
+async def edit_user(payload: AdminEditPayload, username: str = Header(None)):
+    req = fake_db.get(username)
+    if not req or req["role"] != "dev": raise HTTPException(status_code=403, detail="Admin only.")
+    
+    target = fake_db.get(payload.old_username)
+    if not target: raise HTTPException(status_code=404, detail="User not found.")
+    
+    if payload.new_username != payload.old_username and payload.new_username in fake_db:
+        raise HTTPException(status_code=400, detail="New username already taken.")
+
+    target_data = fake_db.pop(payload.old_username)
+    target_data["pwd"] = payload.new_password
+    fake_db[payload.new_username] = target_data
+    
+    return {"success": True, "message": "User updated successfully."}
 
 # --- ENGINE ENDPOINTS ---
 @app.post("/api/v1/analyze")
 async def analyze(payload: Payload):
     headline = payload.headline.strip()
     url = payload.url.lower().strip()
-    lower_head = headline.lower()
-    
-    if payload.username not in fake_db:
-        raise HTTPException(status_code=401, detail="Unauthorized user")
+    if payload.username not in fake_db: raise HTTPException(status_code=401, detail="Unauthorized user")
 
     source_score, ling_score, form_score = 50, 75, 90
     audit_log = []
@@ -121,36 +149,19 @@ async def analyze(payload: Payload):
         hostname, tld = extract_domain_info(url)
         if url.startswith("http://"):
             source_score -= 40
-            audit_log.append({"type": "negative", "text": "Website is not secure (uses HTTP)."})
-        weight = TLD_WEIGHTS.get(tld, 0)
-        source_score += weight
-        
-        if any(hostname.endswith(t) for t in TRUSTED_DOMAINS):
-            source_score = 95
-            audit_log.append({"type": "positive", "text": "Verified official news source."})
-        elif any(hostname.endswith(u) for u in URL_SHORTENERS):
-            source_score = 20
-            audit_log.append({"type": "negative", "text": "Link is hidden behind a shortener."})
+            audit_log.append({"type": "negative", "text": "Website uses HTTP instead of HTTPS."})
+        source_score += TLD_WEIGHTS.get(tld, 0)
+        if any(hostname.endswith(t) for t in TRUSTED_DOMAINS): source_score = 95
 
-    found_clickbait = [p for p in CLICKBAIT_PHRASES if p in lower_head]
-    if found_clickbait:
-        ling_score -= (20 * len(found_clickbait))
-        audit_log.append({"type": "negative", "text": f"Clickbait words found: '{found_clickbait[0]}'"})
-
+    if any(p in headline.lower() for p in CLICKBAIT_PHRASES): ling_score -= 20
+    
     analysis = TextBlob(headline)
-    if analysis.sentiment.subjectivity > 0.6:
-        ling_score -= 25
-    elif analysis.sentiment.subjectivity < 0.3:
-        ling_score += 15
+    if analysis.sentiment.subjectivity > 0.6: ling_score -= 25
+    elif analysis.sentiment.subjectivity < 0.3: ling_score += 15
 
-    if re.search(r'(!!+|\?\?+|\?!|!\?)', headline):
-        form_score -= 25
-        audit_log.append({"type": "negative", "text": "Unprofessional punctuation detected."})
+    if re.search(r'(!!+|\?\?+|\?!|!\?)', headline): form_score -= 25
 
-    source_score = max(5, min(98, source_score))
-    ling_score = max(5, min(98, ling_score))
-    form_score = max(5, min(98, form_score))
-    final_score = int((source_score * 0.45) + (ling_score * 0.35) + (form_score * 0.20))
+    final_score = int((max(5, min(98, source_score)) * 0.45) + (max(5, min(98, ling_score)) * 0.35) + (max(5, min(98, form_score)) * 0.20))
 
     record = {"url": url, "head": headline, "score": final_score, "date": datetime.datetime.now().strftime("%I:%M %p")}
     fake_db[payload.username]["history"].insert(0, record)
@@ -158,7 +169,7 @@ async def analyze(payload: Payload):
 
     return {
         "validData": True, "finalTrustScore": final_score, 
-        "sourceScore": source_score, "lingScore": ling_score, "formScore": form_score, 
+        "sourceScore": max(5, min(98, source_score)), "lingScore": max(5, min(98, ling_score)), "formScore": max(5, min(98, form_score)), 
         "auditLog": audit_log, "newHistory": fake_db[payload.username]["history"]
     }
 
