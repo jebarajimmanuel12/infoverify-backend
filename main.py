@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -149,3 +150,9 @@ async def analyze(payload: Payload):
         "auditLog": audit_log,
         "newHistory": fake_db[payload.username]["history"]
     }
+
+# --- ROOT ENDPOINT FOR FRONTEND ---
+@app.get("/")
+async def serve_frontend():
+    """Serves the index.html file when users visit the root URL."""
+    return FileResponse("index.html")
