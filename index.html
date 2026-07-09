@@ -9,47 +9,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
-            --bg-page: #f4f7fb; 
-            --bg-card: #ffffff; 
-            --bg-input: #f8fafc;
-            --border-light: #e2e8f0;
-            --text-main: #0f172a; 
-            --text-sub: #475569; 
-            --text-light: #94a3b8;
-            --brand-primary: #3b82f6; 
-            --brand-secondary: #8b5cf6;
+            --bg-page: #f4f7fb; --bg-card: #ffffff; --bg-input: #f8fafc; --border-light: #e2e8f0;
+            --text-main: #0f172a; --text-sub: #475569; --text-light: #94a3b8;
+            --brand-primary: #3b82f6; --brand-secondary: #8b5cf6;
             --brand-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
             --brand-glow: rgba(59, 130, 246, 0.2);
-            --status-danger: #ef4444; 
-            --status-warning: #f59e0b; 
-            --status-safe: #10b981; 
-            --font-ui: 'Inter', sans-serif; 
-            --font-mono: 'Fira Code', monospace;
+            --status-danger: #ef4444; --status-warning: #f59e0b; --status-safe: #10b981; 
+            --font-ui: 'Inter', sans-serif; --font-mono: 'Fira Code', monospace;
             --shadow-float: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
-            --shadow-hover: 0 20px 40px -15px rgba(59, 130, 246, 0.15);
             --anim-snappy: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         [data-theme="dark"] {
-            --bg-page: #0f172a; 
-            --bg-card: #1e293b; 
-            --bg-input: #0f172a;
-            --border-light: #334155;
-            --text-main: #f8fafc; 
-            --text-sub: #cbd5e1; 
-            --text-light: #64748b;
+            --bg-page: #0f172a; --bg-card: #1e293b; --bg-input: #0f172a; --border-light: #334155;
+            --text-main: #f8fafc; --text-sub: #cbd5e1; --text-light: #64748b;
             --shadow-float: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-            --shadow-hover: 0 20px 40px -15px rgba(59, 130, 246, 0.3);
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-ui); }
         body { background: var(--bg-page); color: var(--text-main); transition: background-color var(--anim-snappy), color var(--anim-snappy); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-        html { scroll-behavior: smooth; }
-
-        /* --- PREMIUM AUTH LAYER --- */
-        #authLayer { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: radial-gradient(circle at top right, rgba(59,130,246,0.1), transparent 40%), radial-gradient(circle at bottom left, rgba(139,92,246,0.1), transparent 40%), var(--bg-page); z-index: 1000; display: flex; justify-content: center; align-items: center; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .auth-card { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 50px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); width: 100%; max-width: 420px; text-align: center; border: 1px solid rgba(255,255,255,0.4); transform: scale(0.9); opacity: 0; animation: centerExpand 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        [data-theme="dark"] .auth-card { background: rgba(30, 41, 59, 0.7); border-color: rgba(255,255,255,0.05); }
+        
+        /* --- AUTH LAYER WITH RANDOM FLOATING TILES --- */
+        #authLayer { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: radial-gradient(circle at top right, rgba(59,130,246,0.1), transparent 40%), radial-gradient(circle at bottom left, rgba(139,92,246,0.1), transparent 40%), var(--bg-page); z-index: 1000; display: flex; justify-content: center; align-items: center; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; }
+        .bg-tiles { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; pointer-events: none; }
+        .tile { position: absolute; background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.6); backdrop-filter: blur(5px); border-radius: 20px; animation: floatUp 20s infinite linear; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        [data-theme="dark"] .tile { background: rgba(30,41,59,0.4); border-color: rgba(255,255,255,0.05); }
+        @keyframes floatUp { 0% { transform: translateY(100vh) rotate(0deg) scale(0.8); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-20vh) rotate(360deg) scale(1.2); opacity: 0; } }
+        
+        .auth-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); padding: 50px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); width: 100%; max-width: 420px; text-align: center; border: 1px solid rgba(255,255,255,0.6); transform: scale(0.9); opacity: 0; animation: centerExpand 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; position: relative; z-index: 2; }
+        [data-theme="dark"] .auth-card { background: rgba(30, 41, 59, 0.7); border-color: rgba(255,255,255,0.1); }
         @keyframes centerExpand { to { transform: scale(1); opacity: 1; } }
         .hidden-expand { transform: scale(1.1) !important; opacity: 0 !important; pointer-events: none; }
         .auth-toggle { font-size: 13px; color: var(--brand-primary); cursor: pointer; margin-top: 20px; font-weight: 600; display: inline-block; transition: var(--anim-snappy); }
@@ -59,108 +47,78 @@
         nav { display: flex; justify-content: space-between; align-items: center; padding: 30px 5%; background: transparent; position: sticky; top: 0; z-index: 100; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         nav.scrolled { padding: 12px 5%; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-light); box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         [data-theme="dark"] nav.scrolled { background: rgba(30, 41, 59, 0.85); }
-        
         .brand { font-size: 32px; font-weight: 800; display: flex; align-items: center; gap: 15px; color: var(--text-main); text-decoration: none; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .brand-icon { width: 48px; height: 48px; font-size: 24px; background: var(--brand-gradient); border-radius: 12px; display: flex; justify-content: center; align-items: center; color: white; box-shadow: 0 8px 20px var(--brand-glow); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         nav.scrolled .brand { font-size: 22px; gap: 10px; }
         nav.scrolled .brand-icon { width: 34px; height: 34px; font-size: 16px; border-radius: 8px; box-shadow: 0 4px 10px var(--brand-glow); }
-        
         .nav-tools { display: flex; align-items: center; gap: 15px; }
-        .icon-btn { background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-main); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; transition: var(--anim-snappy); display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-float); position: relative; }
+        .icon-btn { background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-main); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; transition: var(--anim-snappy); display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-float); }
         .icon-btn:hover { background: var(--brand-primary); color: white; border-color: var(--brand-primary); transform: scale(1.05); }
-        .profile-btn { background: var(--brand-gradient); color: white; border: none; }
-        .profile-btn:hover { box-shadow: 0 8px 20px var(--brand-glow); transform: scale(1.05); }
 
         /* --- DASHBOARD GRID --- */
         .dashboard { max-width: 1400px; margin: 20px auto 40px auto; padding: 0 5%; display: grid; grid-template-columns: 1fr 380px; gap: 30px; align-items: start; display: none;}
         @media (max-width: 1024px) { .dashboard { grid-template-columns: 1fr; } }
-
         .panel { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 20px; padding: 35px; box-shadow: var(--shadow-float); transition: var(--anim-snappy); }
         .panel-header { font-size: 18px; font-weight: 800; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-
         .input-group { margin-bottom: 25px; position: relative; }
         .input-label { display: block; font-size: 13px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
         .smart-input { width: 100%; background: var(--bg-input); border: 2px solid var(--border-light); border-radius: 12px; padding: 18px 50px 18px 20px; font-size: 15px; color: var(--text-main); outline: none; transition: var(--anim-snappy); margin-bottom: 10px;}
         textarea.smart-input { min-height: 120px; resize: vertical; }
         .smart-input:focus { border-color: var(--brand-primary); background: var(--bg-card); box-shadow: 0 0 0 4px var(--brand-glow); }
-        .input-tools { position: absolute; right: 10px; top: 38px; display: flex; gap: 6px; }
-        .tool-btn { background: transparent; border: none; color: var(--text-light); width: 32px; height: 32px; border-radius: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: var(--anim-snappy); }
-        .tool-btn:hover { background: var(--bg-input); color: var(--brand-primary); }
-
-        .stats-row { display: flex; gap: 20px; font-size: 13px; font-weight: 600; color: var(--text-light); margin-top: -10px; margin-bottom: 25px; }
-
         .btn-verify { width: 100%; background: var(--brand-gradient); background-size: 200% auto; color: white; border: none; padding: 20px; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; transition: var(--anim-snappy); box-shadow: 0 10px 25px var(--brand-glow); display: flex; justify-content: center; align-items: center; gap: 10px; }
         .btn-verify:hover { background-position: right center; transform: translateY(-2px); box-shadow: 0 15px 35px var(--brand-glow); }
 
-        /* --- SETTINGS MODAL (Replaces Dev Zone) --- */
+        /* --- SETTINGS MODAL (TABBED) --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 2000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
         .modal-overlay.active { display: flex; opacity: 1; }
-        .settings-card { background: var(--bg-card); border-radius: 20px; width: 90%; max-width: 500px; padding: 35px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); border: 1px solid var(--border-light); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto;}
+        .settings-card { background: var(--bg-card); border-radius: 20px; width: 90%; max-width: 600px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); border: 1px solid var(--border-light); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto;}
         .modal-overlay.active .settings-card { transform: translateY(0); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border-light); }
-        .modal-title { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-        .close-btn { background: none; border: none; font-size: 20px; color: var(--text-light); cursor: pointer; transition: var(--anim-snappy); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-btn { background: none; border: none; font-size: 24px; color: var(--text-light); cursor: pointer; transition: var(--anim-snappy); }
         .close-btn:hover { color: var(--status-danger); transform: rotate(90deg); }
-        
-        .user-profile-info { text-align: center; margin-bottom: 30px; }
-        .user-avatar-large { width: 70px; height: 70px; border-radius: 50%; background: var(--brand-gradient); color: white; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: 800; margin: 0 auto 15px auto; box-shadow: 0 10px 25px var(--brand-glow); }
-        .role-badge { display: inline-block; padding: 4px 12px; background: rgba(59, 130, 246, 0.1); color: var(--brand-primary); font-size: 12px; font-weight: 700; border-radius: 100px; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
-        .role-badge.admin { background: rgba(139, 92, 246, 0.1); color: var(--brand-secondary); }
 
-        .admin-section { background: var(--bg-input); border: 1px solid var(--border-light); border-radius: 16px; padding: 25px; margin-bottom: 20px; display: none; }
-        .admin-section h4 { font-size: 14px; font-weight: 800; color: var(--brand-secondary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; overflow-x: auto;}
+        .tab-btn { background: none; border: none; font-size: 14px; font-weight: 700; color: var(--text-sub); padding: 8px 16px; border-radius: 100px; cursor: pointer; transition: var(--anim-snappy); white-space: nowrap; }
+        .tab-btn.active { background: var(--bg-input); color: var(--brand-primary); }
+        .tab-content { display: none; animation: slideUp 0.3s forwards; }
+        .tab-content.active { display: block; }
+
+        /* User Edit List */
+        .user-edit-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid var(--border-light); border-radius: 12px; margin-bottom: 10px; background: var(--bg-input); }
+        .user-edit-details { display: flex; align-items: center; gap: 10px; }
+        .role-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: rgba(59, 130, 246, 0.1); color: var(--brand-primary); }
+        .role-badge.dev { background: rgba(139, 92, 246, 0.1); color: var(--brand-secondary); }
+        .edit-fields { display: none; padding: 15px; border: 1px dashed var(--border-light); border-radius: 12px; margin-top: -5px; margin-bottom: 15px; border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; background: var(--bg-card);}
         
-        /* CSS Toggle Switch */
-        .toggle-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: var(--bg-card); padding: 12px 15px; border-radius: 10px; border: 1px solid var(--border-light); }
-        .toggle-label { font-size: 14px; font-weight: 600; color: var(--text-main); }
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--text-light); transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--brand-secondary); }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        /* --- RESULTS & METRICS --- */
+        /* --- RESULTS --- */
         #resultsWrapper { display: none; margin-top: 40px; animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(30px); }
         @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
-
-        .top-toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; }
-        .action-chip { padding: 8px 16px; font-size: 13px; font-weight: 600; background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-sub); border-radius: 100px; cursor: pointer; transition: var(--anim-snappy); display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-float); }
-        .action-chip:hover { background: var(--brand-primary); color: white; border-color: var(--brand-primary); transform: translateY(-2px); }
-
-        .verdict-box { text-align: center; padding: 40px; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: 16px; margin-bottom: 30px; transition: var(--anim-snappy); }
+        .verdict-box { text-align: center; padding: 40px; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: 16px; margin-bottom: 30px; }
         .verdict-score { font-size: 64px; font-weight: 800; font-family: var(--font-mono); margin: 10px 0; line-height: 1; }
-        .verdict-text { font-size: 22px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;}
         .tag-row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         .tag { padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 
-        .json-view { display: none; text-align: left; background: #0f172a; color: #38bdf8; padding: 25px; border-radius: 16px; font-family: var(--font-mono); font-size: 14px; overflow-x: auto; margin-bottom: 30px; border: 1px solid #334155; line-height: 1.5; }
-        
-        .metric { margin-bottom: 20px; }
-        .metric-header { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; margin-bottom: 10px; }
-        .bar-wrap { width: 100%; height: 14px; background: var(--bg-input); border-radius: 100px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
-        .bar-fill { height: 100%; width: 0%; border-radius: 100px; transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1); position: relative; }
-
-        .summary-log { margin-top: 35px; border-top: 1px solid var(--border-light); padding-top: 30px; }
-        .log-line { display: flex; gap: 15px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; margin-bottom: 12px; font-size: 14px; font-weight: 500; transition: var(--anim-snappy); opacity: 0; transform: translateX(-10px); }
-        .log-line.visible { opacity: 1; transform: translateX(0); }
-
-        /* --- SIDEBAR --- */
-        .side-item { padding: 16px; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: var(--anim-snappy); }
+        .side-item { padding: 16px; border-bottom: 1px solid var(--border-light); cursor: pointer; }
         .side-item:last-child { border: none; padding-bottom: 0; }
-        .side-item:hover { background: var(--bg-input); border-radius: 12px; padding-left: 24px; color: var(--brand-primary); }
         .side-title { font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 8px; }
         .side-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; align-items: center; }
         .score-pill { padding: 4px 10px; border-radius: 6px; font-family: var(--font-mono); font-weight: 800; font-size: 12px; }
-
-        /* --- BOTTOM SECTIONS --- */
-        .reveal { opacity: 0; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-        .reveal.visible { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body id="top">
 
+    <!-- AUTHENTICATION LAYER -->
     <div id="authLayer">
+        <!-- Generative Tiles Container -->
+        <div class="bg-tiles" id="tileContainer"></div>
+
         <div class="auth-card">
             <div class="brand-icon" style="margin: 0 auto 20px auto; width: 60px; height: 60px; font-size: 30px;"><i class="fa-solid fa-check-double"></i></div>
             
@@ -184,126 +142,86 @@
         </div>
     </div>
 
+    <!-- MAIN DASHBOARD -->
     <nav id="navbar" style="display: none;">
-        <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;" class="brand">
+        <a href="#" class="brand">
             <div class="brand-icon"><i class="fa-solid fa-check-double"></i></div> InfoVerify
         </a>
         <div class="nav-tools">
             <button class="icon-btn" onclick="toggleTheme()" title="Switch Theme"><i class="fa-solid fa-moon" id="themeIcon"></i></button>
-            <button class="icon-btn profile-btn" onclick="openSettings()" title="Account Settings"><i class="fa-solid fa-user"></i></button>
+            <button class="icon-btn" style="background: var(--brand-gradient); color: white;" onclick="openSettings()" title="Account Settings"><i class="fa-solid fa-user"></i></button>
         </div>
     </nav>
 
+    <!-- SETTINGS / ADMIN MODAL -->
     <div class="modal-overlay" id="settingsModal" onclick="closeSettings(event)">
         <div class="settings-card" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <div class="modal-title"><i class="fa-solid fa-sliders"></i> Account Settings</div>
+                <h2 style="font-size: 24px; font-weight: 800;"><i class="fa-solid fa-sliders"></i> Settings</h2>
                 <button class="close-btn" onclick="closeSettings(event)"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div class="user-profile-info">
-                <div class="user-avatar-large" id="modalAvatar">U</div>
-                <h3 style="font-size: 22px; font-weight: 800; color: var(--text-main);" id="modalUsername">Username</h3>
-                <div class="role-badge" id="modalRole">User</div>
+            <div class="tabs" id="modalTabs">
+                <button class="tab-btn active" onclick="switchTab('tab-profile')">My Profile</button>
+                <button class="tab-btn" id="tabCreateBtn" style="display:none;" onclick="switchTab('tab-create')">Create User</button>
+                <button class="tab-btn" id="tabManageBtn" style="display:none;" onclick="switchTab('tab-manage')">Manage Users</button>
             </div>
 
-            <div id="adminPanelWrapper" style="display: none;">
-                <div class="admin-section" style="display: block;">
-                    <h4><i class="fa-solid fa-user-plus"></i> Create New Role</h4>
-                    <div class="toggle-container">
-                        <span class="toggle-label">Grant Admin Privileges</span>
-                        <label class="switch">
-                            <input type="checkbox" id="newRoleToggle">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <input type="text" id="newUser" class="smart-input" style="padding: 12px 15px; background: var(--bg-card);" placeholder="New Username">
-                    <input type="password" id="newPass" class="smart-input" style="padding: 12px 15px; background: var(--bg-card);" placeholder="Initial Password">
-                    <button class="btn-verify" style="padding: 12px; font-size: 14px; background: var(--brand-secondary);" onclick="adminCreateUser()"><i class="fa-solid fa-plus"></i> Create Account</button>
-                </div>
-
-                <div class="admin-section" style="display: block; margin-bottom: 30px;">
-                    <h4><i class="fa-solid fa-key"></i> Force Password Reset</h4>
-                    <input type="text" id="targetUser" class="smart-input" style="padding: 12px 15px; background: var(--bg-card);" placeholder="Target Username">
-                    <input type="password" id="targetPass" class="smart-input" style="padding: 12px 15px; background: var(--bg-card);" placeholder="New Password">
-                    <button class="btn-verify" style="padding: 12px; font-size: 14px; background: var(--brand-secondary);" onclick="adminResetPassword()"><i class="fa-solid fa-lock-open"></i> Override Password</button>
-                </div>
+            <!-- Tab 1: Edit Own Profile -->
+            <div class="tab-content active" id="tab-profile">
+                <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 15px;">Update your personal credentials.</p>
+                <input type="text" id="selfUser" class="smart-input" placeholder="New Username">
+                <input type="password" id="selfPass" class="smart-input" placeholder="New Password">
+                <button class="btn-verify" style="padding: 12px; font-size: 14px; margin-bottom: 20px;" onclick="updateSelf()">Update Profile</button>
             </div>
 
-            <button class="btn-verify" style="background: rgba(239, 68, 68, 0.1); color: var(--status-danger); box-shadow: none;" onclick="logout()"><i class="fa-solid fa-power-off"></i> Sign Out securely</button>
+            <!-- Tab 2: Create User (Admin) -->
+            <div class="tab-content" id="tab-create">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <span style="font-size: 14px; font-weight: 600;">Grant Admin Rights</span>
+                    <label class="switch"><input type="checkbox" id="newRoleToggle"><span class="slider"></span></label>
+                </div>
+                <input type="text" id="newUser" class="smart-input" placeholder="New Username">
+                <input type="password" id="newPass" class="smart-input" placeholder="Initial Password">
+                <button class="btn-verify" style="padding: 12px; font-size: 14px; background: var(--brand-secondary); margin-bottom: 20px;" onclick="adminCreateUser()"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+            </div>
+
+            <!-- Tab 3: Manage Users (Admin) -->
+            <div class="tab-content" id="tab-manage">
+                <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 15px;">Edit credentials for any network user.</p>
+                <div id="usersListContainer"></div>
+            </div>
+
+            <button class="btn-verify" style="background: rgba(239, 68, 68, 0.1); color: var(--status-danger); box-shadow: none; padding: 12px; width: 100%; margin-top: 20px;" onclick="logout()"><i class="fa-solid fa-power-off"></i> Secure Logout</button>
         </div>
     </div>
 
+    <!-- MAIN APP GRID -->
     <div class="dashboard" id="dashGrid">
         <div class="panel">
             <div class="panel-header">Verify an Article</div>
             
-            <div class="input-group">
-                <label class="input-label">Website Link (Optional)</label>
-                <input type="text" id="sourceInput" class="smart-input" placeholder="e.g., https://bbc.com/news">
-                <div class="input-tools"><button class="tool-btn" onclick="clearField('sourceInput')"><i class="fa-solid fa-eraser"></i></button></div>
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Headline or News Text</label>
-                <textarea id="headlineInput" class="smart-input" placeholder="Paste the news text here..." oninput="updateStats()"></textarea>
-                <div class="input-tools"><button class="tool-btn" onclick="clearField('headlineInput')"><i class="fa-solid fa-eraser"></i></button></div>
-            </div>
-
-            <div class="stats-row">
-                <span id="wordCount"><i class="fa-solid fa-font"></i> 0 Words</span>
-                <span id="topicTag" style="display: none;"><i class="fa-solid fa-tag"></i> Topic: <b id="topicName">Analyzing...</b></span>
-            </div>
+            <input type="text" id="sourceInput" class="smart-input" placeholder="Website Link (e.g., https://bbc.com/news)">
+            <textarea id="headlineInput" class="smart-input" placeholder="Paste the news text here..."></textarea>
 
             <button class="btn-verify" id="scanBtn" onclick="startVerification()">
                 <i class="fa-solid fa-magnifying-glass"></i> Verify This Article
             </button>
 
             <div id="resultsWrapper">
-                <div class="top-toolbar">
-                    <button class="action-chip" onclick="toggleJSON()" id="jsonToggleBtn"><i class="fa-solid fa-code"></i> Developer JSON</button>
-                    <button class="action-chip" onclick="downloadPDF()"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
-                </div>
-
-                <pre class="json-view" id="jsonViewBox"></pre>
-
-                <div id="visualDashboard">
-                    <div class="verdict-box" id="verdictBox">
-                        <div style="font-size: 14px; font-weight: 700; color: var(--text-sub); text-transform: uppercase;">Overall Trust Score</div>
-                        <div class="verdict-score" id="finalScore">--%</div>
-                        <div class="verdict-text" id="verdictText">Assessing...</div>
-                        <div class="tag-row" id="tagArea"></div>
-                    </div>
-
-                    <div class="metric">
-                        <div class="metric-header"><span>Website Trust Rating</span><span id="srcTxt">--/100</span></div>
-                        <div class="bar-wrap"><div class="bar-fill" id="srcBar"></div></div>
-                    </div>
-                    <div class="metric">
-                        <div class="metric-header"><span>Unbiased Writing Check</span><span id="lingTxt">--/100</span></div>
-                        <div class="bar-wrap"><div class="bar-fill" id="lingBar"></div></div>
-                    </div>
-                    <div class="metric">
-                        <div class="metric-header"><span>Professional Formatting</span><span id="formTxt">--/100</span></div>
-                        <div class="bar-wrap"><div class="bar-fill" id="formBar"></div></div>
-                    </div>
-
-                    <div class="summary-log">
-                        <h4 style="font-size: 16px; font-weight: 800; margin-bottom: 20px;"><i class="fa-solid fa-clipboard-list" style="color: var(--brand-primary); margin-right: 8px;"></i> Score Breakdown</h4>
-                        <div id="logArea"></div>
-                    </div>
+                <div class="verdict-box" id="verdictBox">
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-sub); text-transform: uppercase;">Overall Trust Score</div>
+                    <div class="verdict-score" id="finalScore">--%</div>
+                    <div class="verdict-text" id="verdictText">Assessing...</div>
+                    <div class="tag-row" id="tagArea"></div>
                 </div>
             </div>
         </div>
 
         <div>
             <div class="panel" style="position: sticky; top: 120px;">
-                <div class="panel-header" style="font-size: 16px;">
-                    Your Session History
-                </div>
-                <div id="historyList">
-                    <div style="text-align: center; color: var(--text-light); font-size: 14px; padding: 20px;">No verifications yet.</div>
-                </div>
+                <div class="panel-header" style="font-size: 16px;">Session History</div>
+                <div id="historyList"><div style="text-align: center; color: var(--text-light); font-size: 14px; padding: 20px;">No verifications yet.</div></div>
             </div>
         </div>
     </div>
@@ -312,7 +230,24 @@
         const API_BASE = "/api/v1"; 
         let currentUser = null;
 
-        // --- UI & AUTH LOGIC ---
+        // --- DYNAMIC BACKGROUND GENERATOR ---
+        function createTiles() {
+            const container = document.getElementById("tileContainer");
+            for(let i=0; i<12; i++) {
+                const tile = document.createElement("div");
+                tile.className = "tile";
+                const size = Math.random() * 100 + 50;
+                tile.style.width = `${size}px`; tile.style.height = `${size}px`;
+                tile.style.left = `${Math.random() * 100}%`;
+                tile.style.animationDelay = `${Math.random() * 20}s`;
+                tile.style.animationDuration = `${Math.random() * 15 + 15}s`;
+                if(Math.random() > 0.5) tile.style.borderRadius = "50%"; // mix circles and squares
+                container.appendChild(tile);
+            }
+        }
+        createTiles();
+
+        // --- AUTH LOGIC ---
         let isLoginMode = true;
         function toggleAuthMode() {
             isLoginMode = !isLoginMode;
@@ -326,9 +261,7 @@
             const btn = type === 'login' ? document.getElementById("loginBtn") : document.getElementById("regBtn");
             
             if (!u || !p) return alert("Please fill all fields.");
-            
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            const originalText = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             
             try {
                 const response = await fetch(`${API_BASE}/auth/${type}`, {
@@ -336,26 +269,20 @@
                     body: JSON.stringify({ username: u, password: p })
                 });
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || "Authentication Failed");
+                if (!response.ok) throw new Error(data.detail);
 
                 currentUser = { username: data.username, role: data.role };
                 
-                // Populate Settings Modal
-                document.getElementById("modalUsername").innerText = currentUser.username;
-                document.getElementById("modalAvatar").innerText = currentUser.username.charAt(0).toUpperCase();
+                // Set Profile Defaults
+                document.getElementById("selfUser").value = currentUser.username;
                 
-                const roleBadge = document.getElementById("modalRole");
+                // Show Admin Tabs if necessary
                 if(currentUser.role === "dev") {
-                    roleBadge.innerText = "Administrator";
-                    roleBadge.className = "role-badge admin";
-                    document.getElementById("adminPanelWrapper").style.display = "block";
-                } else {
-                    roleBadge.innerText = "Standard User";
-                    roleBadge.className = "role-badge";
-                    document.getElementById("adminPanelWrapper").style.display = "none";
+                    document.getElementById("tabCreateBtn").style.display = "block";
+                    document.getElementById("tabManageBtn").style.display = "block";
                 }
-                
-                // Transition Interface
+
+                // Transition
                 document.getElementById("authLayer").classList.add("hidden-expand");
                 setTimeout(() => {
                     document.getElementById("authLayer").style.display = "none";
@@ -370,48 +297,99 @@
 
         function logout() { location.reload(); }
 
-        // --- SETTINGS MODAL ---
-        function openSettings() { document.getElementById("settingsModal").classList.add("active"); }
-        function closeSettings(e) { 
-            if(e) e.stopPropagation(); 
-            document.getElementById("settingsModal").classList.remove("active"); 
+        // --- MODAL & TABS LOGIC ---
+        function openSettings() { 
+            document.getElementById("settingsModal").classList.add("active"); 
+            if(currentUser.role === "dev") fetchAllUsers();
+        }
+        function closeSettings(e) { if(e) e.stopPropagation(); document.getElementById("settingsModal").classList.remove("active"); }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
         }
 
-        // --- ADMIN FUNCTIONS ---
-        async function adminResetPassword() {
-            const u = document.getElementById("targetUser").value;
-            const p = document.getElementById("targetPass").value;
-            if(!u || !p) return alert("Fill both fields.");
+        // --- PROFILE EDIT (SELF) ---
+        async function updateSelf() {
+            const u = document.getElementById("selfUser").value;
+            const p = document.getElementById("selfPass").value;
+            if(!u || !p) return alert("Fill all fields.");
+            
             try {
-                const response = await fetch(`${API_BASE}/admin/reset`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'username': currentUser.username },
-                    body: JSON.stringify({ target_username: u, new_password: p })
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json', 'username': currentUser.username },
+                    body: JSON.stringify({ new_username: u, new_password: p })
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    alert(`Success: ${data.message}`);
-                    document.getElementById("targetUser").value = ""; document.getElementById("targetPass").value = "";
+                    alert("Profile updated successfully!");
+                    currentUser.username = data.new_username; // Update local state immediately
                 } else alert(`Error: ${data.detail}`);
-            } catch (err) { alert("Failed to reset password."); }
+            } catch (err) { alert("Failed to update profile."); }
         }
 
+        // --- ADMIN CONTROLS ---
         async function adminCreateUser() {
             const u = document.getElementById("newUser").value;
             const p = document.getElementById("newPass").value;
             const isDev = document.getElementById("newRoleToggle").checked;
-            if(!u || !p) return alert("Fill both fields.");
+            if(!u || !p) return alert("Fill all fields.");
             try {
                 const response = await fetch(`${API_BASE}/admin/create_user`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'username': currentUser.username },
                     body: JSON.stringify({ new_username: u, new_password: p, role: isDev ? 'dev' : 'user' })
                 });
+                if (response.ok) { alert("User Created."); fetchAllUsers(); }
+                else alert((await response.json()).detail);
+            } catch (err) { alert("Creation failed."); }
+        }
+
+        async function fetchAllUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/users`, { headers: { 'username': currentUser.username }});
                 const data = await response.json();
-                if (response.ok) {
-                    alert(`Success: ${data.message}`);
-                    document.getElementById("newUser").value = ""; document.getElementById("newPass").value = "";
-                    document.getElementById("newRoleToggle").checked = false;
-                } else alert(`Error: ${data.detail}`);
-            } catch (err) { alert("Failed to create user."); }
+                const container = document.getElementById("usersListContainer");
+                container.innerHTML = "";
+                
+                data.users.forEach(user => {
+                    const row = document.createElement("div");
+                    const roleClass = user.role === 'dev' ? 'role-badge dev' : 'role-badge';
+                    row.innerHTML = `
+                        <div class="user-edit-row">
+                            <div class="user-edit-details">
+                                <span class="${roleClass}">${user.role}</span> <strong>${user.username}</strong>
+                            </div>
+                            <button class="tool-btn" onclick="toggleEditPane('${user.username}')"><i class="fa-solid fa-pen"></i></button>
+                        </div>
+                        <div class="edit-fields" id="edit-pane-${user.username}">
+                            <input type="text" id="edit-u-${user.username}" class="smart-input" value="${user.username}">
+                            <input type="text" id="edit-p-${user.username}" class="smart-input" value="${user.pwd}">
+                            <button class="btn-verify" style="padding: 10px; font-size: 13px;" onclick="adminEditUser('${user.username}')">Save Changes</button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            } catch (err) { console.error("Failed to load users"); }
+        }
+
+        function toggleEditPane(username) {
+            const pane = document.getElementById(`edit-pane-${username}`);
+            pane.style.display = pane.style.display === "block" ? "none" : "block";
+        }
+
+        async function adminEditUser(oldUsername) {
+            const newU = document.getElementById(`edit-u-${oldUsername}`).value;
+            const newP = document.getElementById(`edit-p-${oldUsername}`).value;
+            try {
+                const response = await fetch(`${API_BASE}/admin/edit_user`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json', 'username': currentUser.username },
+                    body: JSON.stringify({ old_username: oldUsername, new_username: newU, new_password: newP })
+                });
+                if (response.ok) { alert("User updated."); fetchAllUsers(); }
+                else alert((await response.json()).detail);
+            } catch (err) { alert("Update failed."); }
         }
 
         // --- VERIFICATION ENGINE ---
@@ -431,16 +409,13 @@
                 });
                 if (!response.ok) throw new Error("Analysis failed");
                 const data = await response.json();
-                renderResults(data, url, headline);
+                renderResults(data, url);
                 if (data.newHistory) renderHistoryList(data.newHistory);
-                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Another Article';
-            } catch (err) {
-                alert("An error occurred during verification.");
-                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify This Article';
-            }
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Another';
+            } catch (err) { alert("Verification failed."); btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify'; }
         }
 
-        function renderResults(data, url, headline) {
+        function renderResults(data, url) {
             document.getElementById("resultsWrapper").style.display = "block";
             const score = data.finalTrustScore;
             const color = score >= 75 ? "var(--status-safe)" : score >= 45 ? "var(--status-warning)" : "var(--status-danger)";
@@ -450,104 +425,23 @@
             document.getElementById("finalScore").style.color = color;
             document.getElementById("verdictBox").style.borderColor = color;
             document.getElementById("verdictBox").style.background = softColor;
-            document.getElementById("verdictText").innerText = score >= 75 ? "Looks Safe to Share" : score >= 45 ? "Be Careful With This" : "Likely Fake or Clickbait";
-
-            let badges = "";
-            if(data.sourceScore >= 80) badges += `<div class="tag" style="background:${softColor}; color:${color};"><i class="fa-solid fa-check"></i> Verified Website</div>`;
-            if(data.lingScore < 50) badges += `<div class="tag" style="background:${softColor}; color:${color};"><i class="fa-solid fa-fire"></i> Clickbait Detected</div>`;
-            document.getElementById("tagArea").innerHTML = badges;
-
-            runBar("srcBar", data.sourceScore, color); document.getElementById("srcTxt").innerText = `${data.sourceScore}/100`;
-            runBar("lingBar", data.lingScore, color); document.getElementById("lingTxt").innerText = `${data.lingScore}/100`;
-            runBar("formBar", data.formScore, color); document.getElementById("formTxt").innerText = `${data.formScore}/100`;
-
-            const logArea = document.getElementById("logArea");
-            logArea.innerHTML = "";
-            data.auditLog.forEach((log, index) => {
-                const icon = log.type === "positive" ? "fa-circle-check" : log.type === "negative" ? "fa-circle-xmark" : "fa-triangle-exclamation";
-                const iColor = log.type === "positive" ? "var(--status-safe)" : log.type === "negative" ? "var(--status-danger)" : "var(--status-warning)";
-                const div = document.createElement("div");
-                div.className = "log-line";
-                div.innerHTML = `<i class="fa-solid ${icon}" style="color:${iColor};"></i> <div>${log.text}</div>`;
-                logArea.appendChild(div);
-                setTimeout(() => div.classList.add("visible"), 100 + (index * 150));
-            });
-
-            document.getElementById("jsonViewBox").innerHTML = JSON.stringify(data, null, 4)
-                .replace(/"(.*?)":/g, '<span class="json-key">"$1"</span>:')
-                .replace(/: "(.*?)"/g, ': <span class="json-string">"$1"</span>')
-                .replace(/: ([0-9]+)/g, ': <span class="json-number">$1</span>');
-        }
-
-        function runBar(id, val, color) {
-            const bar = document.getElementById(id);
-            bar.style.width = "0%"; bar.style.backgroundColor = color;
-            setTimeout(() => bar.style.width = val + "%", 50);
+            document.getElementById("verdictText").innerText = score >= 75 ? "Looks Safe" : score >= 45 ? "Be Careful" : "Likely Fake";
         }
 
         function renderHistoryList(historyArray) {
             const list = document.getElementById("historyList");
             list.innerHTML = ""; 
-            if (historyArray.length === 0) { list.innerHTML = '<div style="text-align: center; color: var(--text-light); font-size: 14px; padding: 20px;">No verifications yet.</div>'; return; }
             historyArray.forEach(item => {
                 const softColor = item.score >= 75 ? "rgba(16, 185, 129, 0.1)" : item.score >= 45 ? "rgba(245, 158, 11, 0.1)" : "rgba(239, 68, 68, 0.1)";
                 const color = item.score >= 75 ? "var(--status-safe)" : item.score >= 45 ? "var(--status-warning)" : "var(--status-danger)";
-                const div = document.createElement("div");
-                div.className = "side-item";
-                div.innerHTML = `
-                    <div class="side-title">${item.head.substring(0,40)}...</div>
-                    <div class="side-meta">
-                        <span>${item.date}</span>
-                        <span class="score-pill" style="background:${softColor}; color:${color};">${item.score}%</span>
-                    </div>
-                `;
+                const div = document.createElement("div"); div.className = "side-item";
+                div.innerHTML = `<div class="side-title">${item.head.substring(0,40)}...</div><div class="side-meta"><span>${item.date}</span><span class="score-pill" style="background:${softColor}; color:${color};">${item.score}%</span></div>`;
                 list.appendChild(div);
             });
         }
 
-        let showJSON = false;
-        function toggleJSON() {
-            showJSON = !showJSON;
-            document.getElementById("visualDashboard").style.display = showJSON ? "none" : "block";
-            document.getElementById("jsonViewBox").style.display = showJSON ? "block" : "none";
-            document.getElementById("jsonToggleBtn").innerHTML = showJSON ? '<i class="fa-solid fa-chart-pie"></i> Visual Dashboard' : '<i class="fa-solid fa-code"></i> Developer JSON';
-        }
-
-        function downloadPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const score = document.getElementById("finalScore").innerText;
-            const verdict = document.getElementById("verdictText").innerText;
-            const headline = document.getElementById("headlineInput").value;
-            doc.setFontSize(22); doc.text("InfoVerify Analysis Report", 20, 20);
-            doc.setFontSize(12); doc.text(`Generated by: ${currentUser.username}`, 20, 30);
-            doc.text(`Date: ${new Date().toLocaleString()}`, 20, 37);
-            doc.line(20, 42, 190, 42);
-            doc.setFontSize(14); doc.text("Analyzed Content:", 20, 52);
-            doc.setFontSize(10); const splitText = doc.splitTextToSize(headline, 170); doc.text(splitText, 20, 60);
-            doc.setFontSize(18); doc.text(`Final Trust Score: ${score}`, 20, 100); doc.text(`Verdict: ${verdict}`, 20, 110);
-            doc.save("InfoVerify_Report.pdf");
-        }
-
-        // --- UTILS ---
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('navbar');
-            if (window.scrollY > 10) nav.classList.add('scrolled');
-            else nav.classList.remove('scrolled');
-        });
-
-        function toggleTheme() {
-            const body = document.body;
-            if (body.getAttribute('data-theme') === 'dark') body.removeAttribute('data-theme');
-            else body.setAttribute('data-theme', 'dark');
-        }
-
-        function clearField(id) { document.getElementById(id).value = ''; if(id === 'headlineInput') updateStats(); }
-        function updateStats() {
-            const text = document.getElementById('headlineInput').value.trim();
-            const words = text ? text.split(/\s+/).length : 0;
-            document.getElementById('wordCount').innerHTML = `<i class="fa-solid fa-font"></i> ${words} Words`;
-        }
+        function toggleTheme() { document.body.toggleAttribute('data-theme', 'dark'); }
+        window.addEventListener('scroll', () => { document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 10); });
     </script>
 </body>
 </html>
