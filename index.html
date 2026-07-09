@@ -67,7 +67,6 @@
         .hidden-expand { transform: scale(1.1) !important; opacity: 0 !important; pointer-events: none; }
 
         /* --- FIXED NAVBAR --- */
-        /* Removed padding animations to fix layout thrashing / scroll lag */
         nav { 
             display: flex; justify-content: space-between; align-items: center; 
             padding: 20px 5%; background: transparent; 
@@ -86,7 +85,6 @@
         .brand { font-size: 28px; font-weight: 800; display: flex; align-items: center; gap: 15px; color: var(--text-main); text-decoration: none; transform-origin: left center; transition: transform var(--anim-snappy);}
         .brand-icon { width: 44px; height: 44px; font-size: 22px; background: var(--brand-gradient); border-radius: 12px; display: flex; justify-content: center; align-items: center; color: white; box-shadow: 0 8px 20px var(--brand-glow); transition: transform var(--anim-snappy);}
         
-        /* Scale using GPU transforms instead of layout-thrashing padding */
         nav.scrolled .brand { transform: scale(0.85); }
         
         .nav-tools { display: flex; align-items: center; gap: 15px; }
@@ -105,7 +103,7 @@
         .btn-main { width: 100%; background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; transition: var(--anim-snappy); box-shadow: 0 10px 25px var(--brand-glow); }
         .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 35px var(--brand-glow); }
 
-        /* Dev Area (Centered Expansion) */
+        /* Dev Area */
         .dev-zone { margin-top: 20px; background: rgba(139, 92, 246, 0.1); border: 1px solid var(--brand-secondary); border-radius: 12px; padding: 20px; display: none; }
         .dev-zone h4 { color: var(--brand-secondary); margin-bottom: 10px; }
 
@@ -199,28 +197,31 @@
     </div>
 
     <script>
-        const API_BASE = "https://infoverify-backend-46wz.onrender.com/api/v1"; 
+        // Use a relative path because FastAPI is serving this file directly
+        const API_BASE = "/api/v1"; 
         let currentUser = null;
 
-        // --- AUTH LOGIC ---
+        // --- AUTH LOGIC (REAL API CALL) ---
         async function handleLogin() {
             const u = document.getElementById("loginUser").value;
             const p = document.getElementById("loginPass").value;
             const btn = document.getElementById("loginBtn");
             
+            if (!u || !p) return alert("Please enter both username and password.");
+            
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             
             try {
-                // Remove this timeout and connect to real API if backend is running
-                // const res = await fetch(`${API_BASE}/auth/login`, { ... }); 
-                
-                // MOCK LOGIN FOR DEMO IF BACKEND ISN'T RUNNING
-                let role = "user";
-                let history = [];
-                if(u === "Jrajimman12" && p === "admin") role = "dev";
-                else if(u !== "user1") throw new Error("Invalid Auth");
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
 
-                currentUser = { username: u, role: role };
+                if (!response.ok) throw new Error("Invalid Auth");
+
+                const data = await response.json();
+                currentUser = { username: data.username, role: data.role };
                 
                 // Transition Interface
                 document.getElementById("authLayer").classList.add("hidden-expand");
@@ -233,11 +234,17 @@
 
                 document.getElementById("userWelcome").innerText = `Hello, ${u}`;
                 
-                if(role === "dev") {
+                if(currentUser.role === "dev") {
                     document.getElementById("devPanel").style.display = "block";
                 }
+
+                // Load initial history from backend
+                if (data.history && data.history.length > 0) {
+                    renderHistoryList(data.history);
+                }
+                
             } catch (err) {
-                alert("Invalid Credentials. Try Jrajimman12 / admin");
+                alert("Invalid Credentials. Please check your username and password.");
                 btn.innerHTML = 'Secure Login';
             }
         }
@@ -247,7 +254,7 @@
             location.reload();
         }
 
-        // --- ENGINE LOGIC ---
+        // --- ENGINE LOGIC (REAL API CALL) ---
         async function startVerification() {
             const headline = document.getElementById("headlineInput").value;
             const url = document.getElementById("sourceInput").value;
@@ -258,21 +265,28 @@
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
             document.getElementById("resultsWrapper").style.display = "none";
 
-            // Mock Data Generation
-            setTimeout(() => {
-                const isBad = headline.toLowerCase().includes("shocking");
-                const data = {
-                    finalTrustScore: isBad ? 34 : 95,
-                    sourceScore: url.includes("drmgrdu") ? 98 : 45,
-                    lingScore: isBad ? 25 : 95,
-                    head: headline,
-                    url: url
-                };
-                
+            try {
+                const response = await fetch(`${API_BASE}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, headline: headline, username: currentUser.username })
+                });
+
+                if (!response.ok) throw new Error("Analysis failed");
+
+                const data = await response.json();
                 renderResults(data);
-                updateHistoryUI(data);
+                
+                if (data.newHistory) {
+                    renderHistoryList(data.newHistory);
+                }
+                
                 btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Now';
-            }, 1000);
+
+            } catch (err) {
+                alert("An error occurred during verification. Please try again.");
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Now';
+            }
         }
 
         function renderResults(data) {
@@ -281,7 +295,7 @@
             
             document.getElementById("finalScore").innerText = `${data.finalTrustScore}%`;
             document.getElementById("finalScore").style.color = color;
-            document.getElementById("verdictText").innerText = data.finalTrustScore > 70 ? "Verified Safe" : "Potential Clickbait / Fake";
+            document.getElementById("verdictText").innerText = data.finalTrustScore > 70 ? "Verified Safe" : data.finalTrustScore > 40 ? "Potential Clickbait" : "Likely Fake";
 
             runBar("srcBar", data.sourceScore, color);
             document.getElementById("srcTxt").innerText = `${data.sourceScore}/100`;
@@ -297,16 +311,24 @@
         }
 
         // --- HISTORY ---
-        function updateHistoryUI(data) {
+        function renderHistoryList(historyArray) {
             const list = document.getElementById("historyList");
-            const div = document.createElement("div");
-            div.className = "side-item";
-            div.innerHTML = `
-                <div class="side-title">${data.head.substring(0,40)}...</div>
-                <div style="font-size: 12px; color: var(--text-sub);">Score: <b>${data.finalTrustScore}%</b></div>
-            `;
-            if (list.innerHTML.includes("No verifications")) list.innerHTML = "";
-            list.prepend(div);
+            list.innerHTML = ""; 
+            
+            if (historyArray.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: var(--text-light); font-size: 14px;">No verifications yet.</div>';
+                return;
+            }
+
+            historyArray.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "side-item";
+                div.innerHTML = `
+                    <div class="side-title">${item.head.substring(0,40)}...</div>
+                    <div style="font-size: 12px; color: var(--text-sub);">Score: <b>${item.score}%</b> <span style="margin-left:10px; color:var(--text-light);">${item.date}</span></div>
+                `;
+                list.appendChild(div);
+            });
         }
 
         // --- PDF GENERATION ---
@@ -340,14 +362,34 @@
             doc.save("InfoVerify_Report.pdf");
         }
 
-        // --- DEV OVERRIDE ---
-        function resetUserPassword() {
+        // --- DEV OVERRIDE (REAL API CALL) ---
+        async function resetUserPassword() {
             const u = document.getElementById("targetUser").value;
             const p = document.getElementById("targetPass").value;
             if(!u || !p) return alert("Fill both fields.");
-            alert(`Backend command sent: Password for '${u}' has been updated to '${p}'.`);
-            document.getElementById("targetUser").value = "";
-            document.getElementById("targetPass").value = "";
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/reset`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'username': currentUser.username // Send dev username in header
+                    },
+                    body: JSON.stringify({ target_username: u, new_password: p })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`Success: ${data.message}`);
+                    document.getElementById("targetUser").value = "";
+                    document.getElementById("targetPass").value = "";
+                } else {
+                    alert(`Error: ${data.detail}`);
+                }
+            } catch (err) {
+                alert("Failed to reset password. Check connection.");
+            }
         }
 
         // --- UI UTILS ---
