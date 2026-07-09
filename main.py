@@ -7,7 +7,7 @@ import re
 import datetime
 from textblob import TextBlob
 
-app = FastAPI(title="InfoVerify Enterprise Engine", version="9.4.0")
+app = FastAPI(title="InfoVerify Enterprise Engine", version="10.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,6 +31,11 @@ class AuthPayload(BaseModel):
 class ResetPayload(BaseModel):
     target_username: str
     new_password: str
+
+class AdminCreatePayload(BaseModel):
+    new_username: str
+    new_password: str
+    role: str
 
 class Payload(BaseModel):
     url: str
@@ -73,18 +78,31 @@ async def register(payload: AuthPayload):
     fake_db[payload.username] = {"pwd": payload.password, "role": "user", "history": []}
     return {"success": True, "username": payload.username, "role": "user", "history": []}
 
-@app.post("/api/v1/auth/reset")
+# --- ADMIN SECURE ENDPOINTS ---
+@app.post("/api/v1/admin/reset")
 async def reset_password(payload: ResetPayload, username: str = Header(None)):
     requester = fake_db.get(username)
     if not requester or requester["role"] != "dev":
-        raise HTTPException(status_code=403, detail="Only developers can reset passwords.")
+        raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
     
     target = fake_db.get(payload.target_username)
     if not target:
-        raise HTTPException(status_code=404, detail="User not found.")
+        raise HTTPException(status_code=404, detail="Target user not found.")
     
     target["pwd"] = payload.new_password
-    return {"success": True, "message": f"Password updated for {payload.target_username}"}
+    return {"success": True, "message": f"Password successfully updated for {payload.target_username}"}
+
+@app.post("/api/v1/admin/create_user")
+async def create_user(payload: AdminCreatePayload, username: str = Header(None)):
+    requester = fake_db.get(username)
+    if not requester or requester["role"] != "dev":
+        raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
+    
+    if payload.new_username in fake_db:
+        raise HTTPException(status_code=400, detail="Username already exists.")
+    
+    fake_db[payload.new_username] = {"pwd": payload.new_password, "role": payload.role, "history": []}
+    return {"success": True, "message": f"Account '{payload.new_username}' created with role: {payload.role.upper()}"}
 
 # --- ENGINE ENDPOINTS ---
 @app.post("/api/v1/analyze")
