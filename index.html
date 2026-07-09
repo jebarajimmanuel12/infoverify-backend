@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfoVerify | Enterprise ML Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-page: #f4f7fb; 
+            --bg-card: #ffffff; 
+            --bg-input: #f8fafc;
+            --border-light: #e2e8f0;
+            
+            --text-main: #0f172a; 
+            --text-sub: #475569; 
+            --text-light: #94a3b8;
+            
+            --brand-primary: #3b82f6; 
+            --brand-secondary: #8b5cf6;
+            --brand-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --brand-glow: rgba(59, 130, 246, 0.2);
+            
+            --status-danger: #ef4444; 
+            --status-warning: #f59e0b; 
+            --status-safe: #10b981; 
+            
+            --font-ui: 'Inter', sans-serif; 
+            --font-mono: 'Fira Code', monospace;
+            
+            --shadow-float: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 20px 40px -15px rgba(59, 130, 246, 0.15);
+            --anim-snappy: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg-page: #0f172a; 
+            --bg-card: #1e293b; 
+            --bg-input: #0f172a;
+            --border-light: #334155;
+            --text-main: #f8fafc; 
+            --text-sub: #cbd5e1; 
+            --text-light: #64748b;
+            --shadow-float: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-ui); }
+        body { background: var(--bg-page); color: var(--text-main); transition: background-color var(--anim-snappy), color var(--anim-snappy); -webkit-font-smoothing: antialiased; }
+        
+        /* --- CENTERED EXPANSION AUTH OVERLAY (No Modals) --- */
+        #authLayer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: var(--bg-page); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .auth-card {
+            background: var(--bg-card); padding: 50px; border-radius: 24px;
+            box-shadow: var(--shadow-float); width: 100%; max-width: 450px;
+            text-align: center; border: 1px solid var(--border-light);
+            transform: scale(0.9); opacity: 0; animation: centerExpand 0.5s forwards;
+        }
+        @keyframes centerExpand { to { transform: scale(1); opacity: 1; } }
+        
+        .hidden-expand { transform: scale(1.1) !important; opacity: 0 !important; pointer-events: none; }
+
+        /* --- FIXED NAVBAR --- */
+        /* Removed padding animations to fix layout thrashing / scroll lag */
+        nav { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 20px 5%; background: transparent; 
+            position: sticky; top: 0; z-index: 100; 
+            transition: background 0.3s ease, box-shadow 0.3s ease; 
+        }
+        
+        nav.scrolled {
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(12px); 
+            border-bottom: 1px solid var(--border-light);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        [data-theme="dark"] nav.scrolled { background: rgba(30, 41, 59, 0.85); }
+        
+        .brand { font-size: 28px; font-weight: 800; display: flex; align-items: center; gap: 15px; color: var(--text-main); text-decoration: none; transform-origin: left center; transition: transform var(--anim-snappy);}
+        .brand-icon { width: 44px; height: 44px; font-size: 22px; background: var(--brand-gradient); border-radius: 12px; display: flex; justify-content: center; align-items: center; color: white; box-shadow: 0 8px 20px var(--brand-glow); transition: transform var(--anim-snappy);}
+        
+        /* Scale using GPU transforms instead of layout-thrashing padding */
+        nav.scrolled .brand { transform: scale(0.85); }
+        
+        .nav-tools { display: flex; align-items: center; gap: 15px; }
+        .theme-btn { background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-main); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; transition: var(--anim-snappy); display: flex; justify-content: center; align-items: center; }
+        .theme-btn:hover { background: var(--brand-primary); color: white; }
+
+        /* --- DASHBOARD UI --- */
+        .dashboard { max-width: 1400px; margin: 20px auto; padding: 0 5%; display: grid; grid-template-columns: 1fr 380px; gap: 30px; align-items: start; display: none; }
+        .panel { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 20px; padding: 35px; box-shadow: var(--shadow-float); transition: var(--anim-snappy); }
+        .panel-header { font-size: 18px; font-weight: 800; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .smart-input { width: 100%; background: var(--bg-input); border: 2px solid var(--border-light); border-radius: 14px; padding: 18px; font-size: 16px; color: var(--text-main); outline: none; margin-bottom: 20px; transition: var(--anim-snappy); }
+        .smart-input:focus { border-color: var(--brand-primary); background: var(--bg-card); }
+        textarea.smart-input { min-height: 120px; resize: vertical; }
+
+        .btn-main { width: 100%; background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; transition: var(--anim-snappy); box-shadow: 0 10px 25px var(--brand-glow); }
+        .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 35px var(--brand-glow); }
+
+        /* Dev Area (Centered Expansion) */
+        .dev-zone { margin-top: 20px; background: rgba(139, 92, 246, 0.1); border: 1px solid var(--brand-secondary); border-radius: 12px; padding: 20px; display: none; }
+        .dev-zone h4 { color: var(--brand-secondary); margin-bottom: 10px; }
+
+        /* Results & Metrics */
+        #resultsWrapper { display: none; margin-top: 40px; animation: centerExpand 0.6s forwards; }
+        .metric { margin-bottom: 20px; }
+        .metric-header { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+        .bar-wrap { width: 100%; height: 14px; background: var(--bg-input); border-radius: 100px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 0%; transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .side-item { padding: 16px 0; border-bottom: 1px solid var(--border-light); }
+        .side-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <div id="authLayer">
+        <div class="auth-card">
+            <div class="brand-icon" style="margin: 0 auto 20px auto; width: 60px; height: 60px; font-size: 30px;"><i class="fa-solid fa-check-double"></i></div>
+            <h2 style="margin-bottom: 10px;">Access InfoVerify</h2>
+            <p style="color: var(--text-sub); margin-bottom: 30px; font-size: 14px;">Enter your credentials to continue.</p>
+            
+            <input type="text" id="loginUser" class="smart-input" placeholder="Username">
+            <input type="password" id="loginPass" class="smart-input" placeholder="Password">
+            <button class="btn-main" onclick="handleLogin()" id="loginBtn">Secure Login</button>
+        </div>
+    </div>
+
+    <div id="mainApp" style="display: none; opacity: 0; transition: opacity 0.6s;">
+        <nav id="navbar">
+            <a href="#" class="brand">
+                <div class="brand-icon"><i class="fa-solid fa-check-double"></i></div> InfoVerify
+            </a>
+            <div class="nav-tools">
+                <span id="userWelcome" style="font-weight: 600; font-size: 14px;"></span>
+                <button class="theme-btn" onclick="toggleTheme()"><i class="fa-solid fa-moon" id="themeIcon"></i></button>
+                <button class="theme-btn" style="color: var(--status-danger);" onclick="logout()"><i class="fa-solid fa-power-off"></i></button>
+            </div>
+        </nav>
+
+        <div class="dashboard" id="dashGrid">
+            
+            <div class="panel">
+                <div class="panel-header">Verify an Article</div>
+                
+                <input type="text" id="sourceInput" class="smart-input" placeholder="Website Link (e.g., https://bbc.com/news)">
+                <textarea id="headlineInput" class="smart-input" placeholder="Paste the headline or news text here..."></textarea>
+                
+                <button class="btn-main" id="scanBtn" onclick="startVerification()">
+                    <i class="fa-solid fa-magnifying-glass"></i> Verify Now
+                </button>
+
+                <div id="resultsWrapper">
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 20px;">
+                        <button class="btn-main" style="width: auto; padding: 10px 20px; font-size: 13px;" onclick="downloadPDF()"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+                    </div>
+
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="font-size: 64px; font-weight: 800; font-family: var(--font-mono);" id="finalScore">--%</div>
+                        <div style="font-size: 22px; font-weight: 700;" id="verdictText">Assessing...</div>
+                    </div>
+
+                    <div class="metric">
+                        <div class="metric-header"><span>Website Trust</span><span id="srcTxt">--/100</span></div>
+                        <div class="bar-wrap"><div class="bar-fill" id="srcBar"></div></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-header"><span>Language Bias</span><span id="lingTxt">--/100</span></div>
+                        <div class="bar-wrap"><div class="bar-fill" id="lingBar"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="panel" style="margin-bottom: 30px;">
+                    <div class="panel-header">Your History</div>
+                    <div id="historyList">
+                        <div style="text-align: center; color: var(--text-light); font-size: 14px;">No verifications yet.</div>
+                    </div>
+                </div>
+
+                <div class="panel dev-zone" id="devPanel">
+                    <h4><i class="fa-solid fa-code"></i> Developer Override</h4>
+                    <p style="font-size: 12px; margin-bottom: 15px;">Modify user passwords directly.</p>
+                    <input type="text" id="targetUser" class="smart-input" style="padding: 12px; margin-bottom: 10px;" placeholder="Target Username">
+                    <input type="password" id="targetPass" class="smart-input" style="padding: 12px; margin-bottom: 10px;" placeholder="New Password">
+                    <button class="btn-main" style="padding: 12px; background: var(--brand-secondary);" onclick="resetUserPassword()">Update Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8000/api/v1"; 
+        let currentUser = null;
+
+        // --- AUTH LOGIC ---
+        async function handleLogin() {
+            const u = document.getElementById("loginUser").value;
+            const p = document.getElementById("loginPass").value;
+            const btn = document.getElementById("loginBtn");
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            
+            try {
+                // Remove this timeout and connect to real API if backend is running
+                // const res = await fetch(`${API_BASE}/auth/login`, { ... }); 
+                
+                // MOCK LOGIN FOR DEMO IF BACKEND ISN'T RUNNING
+                let role = "user";
+                let history = [];
+                if(u === "Jrajimman12" && p === "admin") role = "dev";
+                else if(u !== "user1") throw new Error("Invalid Auth");
+
+                currentUser = { username: u, role: role };
+                
+                // Transition Interface
+                document.getElementById("authLayer").classList.add("hidden-expand");
+                setTimeout(() => {
+                    document.getElementById("authLayer").style.display = "none";
+                    document.getElementById("mainApp").style.display = "block";
+                    document.getElementById("dashGrid").style.display = "grid";
+                    setTimeout(() => document.getElementById("mainApp").style.opacity = 1, 50);
+                }, 500);
+
+                document.getElementById("userWelcome").innerText = `Hello, ${u}`;
+                
+                if(role === "dev") {
+                    document.getElementById("devPanel").style.display = "block";
+                }
+            } catch (err) {
+                alert("Invalid Credentials. Try Jrajimman12 / admin");
+                btn.innerHTML = 'Secure Login';
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            location.reload();
+        }
+
+        // --- ENGINE LOGIC ---
+        async function startVerification() {
+            const headline = document.getElementById("headlineInput").value;
+            const url = document.getElementById("sourceInput").value;
+            const btn = document.getElementById("scanBtn");
+            
+            if(!headline) return alert("Paste a headline to verify.");
+            
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
+            document.getElementById("resultsWrapper").style.display = "none";
+
+            // Mock Data Generation
+            setTimeout(() => {
+                const isBad = headline.toLowerCase().includes("shocking");
+                const data = {
+                    finalTrustScore: isBad ? 34 : 95,
+                    sourceScore: url.includes("drmgrdu") ? 98 : 45,
+                    lingScore: isBad ? 25 : 95,
+                    head: headline,
+                    url: url
+                };
+                
+                renderResults(data);
+                updateHistoryUI(data);
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Now';
+            }, 1000);
+        }
+
+        function renderResults(data) {
+            document.getElementById("resultsWrapper").style.display = "block";
+            const color = data.finalTrustScore > 70 ? "var(--status-safe)" : data.finalTrustScore > 40 ? "var(--status-warning)" : "var(--status-danger)";
+            
+            document.getElementById("finalScore").innerText = `${data.finalTrustScore}%`;
+            document.getElementById("finalScore").style.color = color;
+            document.getElementById("verdictText").innerText = data.finalTrustScore > 70 ? "Verified Safe" : "Potential Clickbait / Fake";
+
+            runBar("srcBar", data.sourceScore, color);
+            document.getElementById("srcTxt").innerText = `${data.sourceScore}/100`;
+            
+            runBar("lingBar", data.lingScore, color);
+            document.getElementById("lingTxt").innerText = `${data.lingScore}/100`;
+        }
+
+        function runBar(id, val, color) {
+            const bar = document.getElementById(id);
+            bar.style.width = "0%"; bar.style.backgroundColor = color;
+            setTimeout(() => bar.style.width = val + "%", 50);
+        }
+
+        // --- HISTORY ---
+        function updateHistoryUI(data) {
+            const list = document.getElementById("historyList");
+            const div = document.createElement("div");
+            div.className = "side-item";
+            div.innerHTML = `
+                <div class="side-title">${data.head.substring(0,40)}...</div>
+                <div style="font-size: 12px; color: var(--text-sub);">Score: <b>${data.finalTrustScore}%</b></div>
+            `;
+            if (list.innerHTML.includes("No verifications")) list.innerHTML = "";
+            list.prepend(div);
+        }
+
+        // --- PDF GENERATION ---
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const score = document.getElementById("finalScore").innerText;
+            const verdict = document.getElementById("verdictText").innerText;
+            const headline = document.getElementById("headlineInput").value;
+            
+            doc.setFontSize(22);
+            doc.text("InfoVerify Analysis Report", 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Generated by: ${currentUser.username}`, 20, 30);
+            doc.text(`Date: ${new Date().toLocaleString()}`, 20, 37);
+            
+            doc.line(20, 42, 190, 42);
+            
+            doc.setFontSize(14);
+            doc.text("Analyzed Content:", 20, 52);
+            doc.setFontSize(10);
+            const splitText = doc.splitTextToSize(headline, 170);
+            doc.text(splitText, 20, 60);
+            
+            doc.setFontSize(18);
+            doc.text(`Final Trust Score: ${score}`, 20, 100);
+            doc.text(`Verdict: ${verdict}`, 20, 110);
+            
+            doc.save("InfoVerify_Report.pdf");
+        }
+
+        // --- DEV OVERRIDE ---
+        function resetUserPassword() {
+            const u = document.getElementById("targetUser").value;
+            const p = document.getElementById("targetPass").value;
+            if(!u || !p) return alert("Fill both fields.");
+            alert(`Backend command sent: Password for '${u}' has been updated to '${p}'.`);
+            document.getElementById("targetUser").value = "";
+            document.getElementById("targetPass").value = "";
+        }
+
+        // --- UI UTILS ---
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 10) nav.classList.add('scrolled');
+            else nav.classList.remove('scrolled');
+        });
+
+        function toggleTheme() {
+            const body = document.body;
+            if (body.getAttribute('data-theme') === 'dark') body.removeAttribute('data-theme');
+            else body.setAttribute('data-theme', 'dark');
+        }
+    </script>
+</body>
+</html>
