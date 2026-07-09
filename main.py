@@ -1,14 +1,13 @@
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List
-from textblob import TextBlob
 import urllib.parse
 import re
 import datetime
+from textblob import TextBlob
 
-app = FastAPI(title="InfoVerify Enterprise Engine", version="9.3.0")
+app = FastAPI(title="InfoVerify Enterprise Engine", version="9.4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,14 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- IN-MEMORY DATABASE (Swap with SQLite/MongoDB later) ---
+# --- IN-MEMORY DATABASE ---
 fake_db = {
     "Jrajimman12": {"pwd": "admin", "role": "dev", "history": []},
     "m416johnson": {"pwd": "password123", "role": "user", "history": []}
 }
 
 # --- SCHEMAS ---
-class LoginPayload(BaseModel):
+class AuthPayload(BaseModel):
     username: str
     password: str
 
@@ -36,7 +35,7 @@ class ResetPayload(BaseModel):
 class Payload(BaseModel):
     url: str
     headline: str
-    username: str # To track who made the request
+    username: str
 
 # --- TRUST DATABASES ---
 TLD_WEIGHTS = { 
@@ -60,17 +59,19 @@ def extract_domain_info(url_string: str):
 
 # --- AUTH ENDPOINTS ---
 @app.post("/api/v1/auth/login")
-async def login(payload: LoginPayload):
+async def login(payload: AuthPayload):
     user = fake_db.get(payload.username)
     if not user or user["pwd"] != payload.password:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"success": True, "username": payload.username, "role": user["role"], "history": user["history"]}
+
+@app.post("/api/v1/auth/register")
+async def register(payload: AuthPayload):
+    if payload.username in fake_db:
+        raise HTTPException(status_code=400, detail="Username already exists")
     
-    return {
-        "success": True, 
-        "username": payload.username, 
-        "role": user["role"],
-        "history": user["history"]
-    }
+    fake_db[payload.username] = {"pwd": payload.password, "role": "user", "history": []}
+    return {"success": True, "username": payload.username, "role": "user", "history": []}
 
 @app.post("/api/v1/auth/reset")
 async def reset_password(payload: ResetPayload, username: str = Header(None)):
@@ -103,7 +104,6 @@ async def analyze(payload: Payload):
         if url.startswith("http://"):
             source_score -= 40
             audit_log.append({"type": "negative", "text": "Website is not secure (uses HTTP)."})
-
         weight = TLD_WEIGHTS.get(tld, 0)
         source_score += weight
         
@@ -134,25 +134,16 @@ async def analyze(payload: Payload):
     form_score = max(5, min(98, form_score))
     final_score = int((source_score * 0.45) + (ling_score * 0.35) + (form_score * 0.20))
 
-    # Save to user history
-    record = {
-        "url": url, 
-        "head": headline, 
-        "score": final_score, 
-        "date": datetime.datetime.now().strftime("%I:%M %p")
-    }
+    record = {"url": url, "head": headline, "score": final_score, "date": datetime.datetime.now().strftime("%I:%M %p")}
     fake_db[payload.username]["history"].insert(0, record)
-    fake_db[payload.username]["history"] = fake_db[payload.username]["history"][:5] # Keep last 5
+    fake_db[payload.username]["history"] = fake_db[payload.username]["history"][:5]
 
     return {
         "validData": True, "finalTrustScore": final_score, 
         "sourceScore": source_score, "lingScore": ling_score, "formScore": form_score, 
-        "auditLog": audit_log,
-        "newHistory": fake_db[payload.username]["history"]
+        "auditLog": audit_log, "newHistory": fake_db[payload.username]["history"]
     }
 
-# --- ROOT ENDPOINT FOR FRONTEND ---
 @app.get("/")
 async def serve_frontend():
-    """Serves the index.html file when users visit the root URL."""
     return FileResponse("index.html")
