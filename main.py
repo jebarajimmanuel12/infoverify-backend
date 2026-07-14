@@ -21,7 +21,8 @@ app.add_middleware(
 # --- IN-MEMORY DATABASE ---
 fake_db = {
     "Jrajimman12": {"pwd": "admin", "role": "dev", "history": []},
-    "m416johnson": {"pwd": "password123", "role": "user", "history": []}
+    "m416johnson": {"pwd": "Johnson@2006", "role": "user", "history": []}
+    "abdur1905": {"pwd": "iamuruttu", "role": "user", "history": []}
 }
 
 # --- SCHEMAS ---
