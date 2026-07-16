@@ -141,20 +141,43 @@ def extract_domain_info(url_string: str):
         return "", ""
 
 
+def get_domain_core(domain: str) -> str:
+    """The primary brand-name label of a domain, e.g. 'bbc' from 'bbc.com'."""
+    return domain.split('.')[0]
+
+
 def check_typosquatting(hostname: str):
     """
     Flags domains that are suspiciously close to a trusted domain without
-    being an exact match - e.g. 'bbc-news-online.com' or 'reuter.com'
+    being an exact match - e.g. 'bbc-news-online.click' or 'reuter.com'
     impersonating 'bbc.com' / 'reuters.com'. Catches misinformation sites
     that deliberately mimic a trusted brand's URL.
+
+    Compares against each trusted domain's brand-name token (not the whole
+    hostname string) so it still catches spoofs that pad the URL with extra
+    words like '-news' or '-live', while a length floor and single-direction
+    substring check keep it from misfiring on unrelated real domains.
     """
     if not hostname:
         return None
+    tokens = [t for t in re.split(r'[.\-]', hostname) if t]
     for trusted in TRUSTED_DOMAINS:
-        if hostname == trusted:
-            return None  # exact match, not a spoof
-        similarity = difflib.SequenceMatcher(None, hostname, trusted).ratio()
-        if similarity >= 0.80:
+        if hostname == trusted or hostname.endswith('.' + trusted):
+            return None  # exact match or legit subdomain, not a spoof
+        trusted_core = get_domain_core(trusted)
+        if len(trusted_core) < 4:
+            # too short to fuzzy-match safely (e.g. "dw") - exact token only
+            if trusted_core in tokens:
+                return trusted
+            continue
+        for token in tokens:
+            if len(token) < 4:
+                continue
+            if token == trusted_core or trusted_core in token:
+                return trusted
+            if difflib.SequenceMatcher(None, token, trusted_core).ratio() >= 0.82:
+                return trusted
+        if difflib.SequenceMatcher(None, hostname, trusted).ratio() >= 0.85:
             return trusted
     return None
 
